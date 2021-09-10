@@ -12,7 +12,7 @@ arg_parser = argparse.ArgumentParser(description="A Discord bot for transferring
 arg_parser.add_argument('--prefix', dest='prefix', default='!', help='bot command prefix (default !)')
 arg_parser.add_argument('--token', required=True, help='bot access token')
 arg_parser.add_argument('--users', required=True, type=argparse.FileType('r'), help='slack users.json file')
-arg_parser.add_argument('file', nargs='+', type=argparse.FileType('r'))
+arg_parser.add_argument('file', nargs='+')
 
 # Parse the command-line
 args = arg_parser.parse_args(sys.argv[1:])
@@ -25,22 +25,23 @@ for u in json.load(args.users):
 
 # Process the input files
 messages = []
-for fh in args.file:
-    for msg in json.load(fh):
-        # Unfold mentions
-        txt = re.sub(r'<@(\w+)>',
-                     (lambda m: '@' + users[m.group(1)]),
-                     msg["text"])
-        # Unescape HTML characters
-        txt = re.sub(r'&gt;', '>', txt)
-        txt = re.sub(r'&lt;', '<', txt)
-        txt = re.sub(r'&amp;', '&', txt)
+for fn in args.file:
+    with open(fn, "rb") as fh:
+        for msg in json.load(fh):
+            # Unfold mentions
+            txt = re.sub(r'<@(\w+)>',
+                         (lambda m: '@' + users.get(m.group(1), 'Unknown')),
+                         msg["text"])
+            # Unescape HTML characters
+            txt = re.sub(r'&gt;', '>', txt)
+            txt = re.sub(r'&lt;', '<', txt)
+            txt = re.sub(r'&amp;', '&', txt)
 
-        # Split messages longer than 2000 characters
-        while len(txt) > 0:
-            msg["text"] = txt[:2000]
-            txt = txt[2000:]
-            messages.append(msg)
+            # Split messages longer than 2000 characters
+            while len(txt) > 0:
+                msg["text"] = txt[:2000]
+                txt = txt[2000:]
+                messages.append(msg)
 
 # Sort the messages by timestamp
 messages.sort(key=(lambda msg: msg['ts']))
