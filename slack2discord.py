@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-import asyncio
-import datetime
 import discord
 from discord.ext import commands
+import datetime
 import json
 import argparse
 import sys
@@ -28,9 +27,11 @@ for u in json.load(args.users):
 messages = []
 for fh in args.file:
     for msg in json.load(fh):
+        # Unfold mentions
         txt = re.sub(r'<@(\w+)>',
                      (lambda m: '@' + users[m.group(1)]),
                      msg["text"])
+        # Unescape HTML characters
         txt = re.sub(r'&gt;', '>', txt)
         txt = re.sub(r'&lt;', '<', txt)
         txt = re.sub(r'&amp;', '&', txt)
@@ -41,12 +42,22 @@ for fh in args.file:
             txt = txt[2000:]
             messages.append(msg)
 
+# Sort the messages by timestamp
+messages.sort(key=(lambda msg: msg['ts']))
+
 print("Read {0} messages.".format(len(messages)))
 
 # Create the bot
 bot = commands.Bot(command_prefix=args.prefix)
 
-print("Activating the bot.")
+print("Activating the bot. Press Ctrl-C to exit.")
+
+def format_message(msg):
+    """Format the given message in Markdown, suitable for posting on Discord."""
+    return "{timestamp} **{user}**: {text}".format(
+        timestamp = datetime.datetime.fromtimestamp(float(msg['ts'])).strftime('%Y-%m-%d %H:%M'),
+        user=users[msg['user']],
+        text=msg['text'])
 
 # Set up the bot listener
 @bot.command(pass_context=True)
@@ -56,21 +67,26 @@ async def slackimport(ctx):
     print ("Sending {0} messages ...".format(n))
     for msg in messages:
         k = k + 1
-        if k % 20 == 0: print ("{0}/{1} messages sent ...".format(k, n))
+        if k % 10 == 0: print ("{0}/{1} messages sent ...".format(k, n))
         try:
-            await ctx.send ("{timestamp} {user}: {text}".format(
-                timestamp = datetime.datetime.fromtimestamp(float(msg['ts'])).strftime('%Y-%m-%d %H:%M'),
-                user=users[msg['user']],
-                text=msg['text']))
+            # Send the message to Discord (Markdown format)
+            await ctx.send (format_message(msg))
         except:
             print("Message {0} could not be sent.".format(k))
-    print ("Sent!")
+    print ("Finished sending messages. My job is done, kill me now.")
 
 
 @bot.command(pass_context=True)
+async def slackpreview(ctx):
+    for msg in messages:
+        print("-" * 50)
+        print(format_message(msg))
+
+@bot.command(pass_context=True)
 async def slackexit(ctx):
-    print("Stopping.")
+    print("Logging out ...")
     await bot.logout()
+    print("Stopping (do not worry about the error messages printed below) ...")
     exit(0)
 
 # Run the bot
