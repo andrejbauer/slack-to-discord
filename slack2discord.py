@@ -56,7 +56,7 @@ def format_message(msg):
     """Format the given message in Markdown, suitable for posting on Discord."""
     return "{timestamp} **{user}**: {text}".format(
         timestamp = datetime.datetime.fromtimestamp(float(msg['ts'])).strftime('%Y-%m-%d %H:%M'),
-        user=users[msg['user']],
+        user=users.get(msg.get('user'), 'Unknown'),
         text=msg['text'])
 
 # Set up the bot listener
