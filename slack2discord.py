@@ -55,10 +55,15 @@ print("Activating the bot. Press Ctrl-C to exit.")
 
 def format_message(msg):
     """Format the given message in Markdown, suitable for posting on Discord."""
-    return "{timestamp} **{user}**: {text}".format(
+    if(msg.get('files')):
+            url=msg.get('files')[0].get('url_private')
+    else:
+            url=""
+    return "{timestamp} **{user}**: {text} {url}".format(
         timestamp = datetime.datetime.fromtimestamp(float(msg['ts'])).strftime('%Y-%m-%d %H:%M'),
-        user=users.get(msg.get('user'), 'Unknown'),
-        text=msg['text'])
+        user='Unknown',
+        text=msg['text'],
+        url=url)
 
 # Set up the bot listener
 @bot.command(pass_context=True)
